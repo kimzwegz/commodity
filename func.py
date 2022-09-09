@@ -103,9 +103,9 @@ class Model:
         
         return df_train, df_test, stat_train, stat_test
 
-    def skpredict_window(self, skmodel, cols_x, cols_y, col_period , train_window=4 , test_window=1, test_gap = 0, expanding=False, print_iter=False):
+    def skpredict_window(self, df, skmodel, cols_x, cols_y, col_period , train_window=4 , test_window=1, test_gap = 0, expanding=False, print_iter=False):
         regr = skmodel
-        train_test = self.train(self.df, col_period, train_window , test_window, test_gap, expanding)
+        train_test = self.train(df, col_period, train_window , test_window, test_gap, expanding)
         
         data_train = []
         data_test = []
@@ -145,3 +145,79 @@ class Model:
         print(f'Average MSE test: {mse_test_all}')
         
         return df_train_conso , df_test_conso, stat_train_times, stat_test_times
+
+    def backtest(self, df, value, strat_return, pct_change, predict_return):
+        ## produce array for t and t-1 indexing
+        
+        period_arr = np.empty([0,2])
+        period_idx = [i for i in df.index]
+
+        for i,j in enumerate(period_idx):
+            if i ==0:
+                x, y = j, np.nan
+            else:
+                x,y = j, period_idx[i-1]
+            arr = np.array([[x,y]])
+            period_arr = np.append(period_arr, arr, axis=0)
+
+        ## back test results of strategy
+        price_beg = df.loc[period_arr[0,0]][value]
+        for i in df.index:
+            period_prev = period_arr[period_arr[:,0] ==i][:,1][0]
+            period_now = i
+            price_now = df.loc[i][value]
+            return_predict = df.loc[i][strat_return]
+            predict = df.loc[i][predict_return]
+            return_act = df.loc[i][pct_change]
+
+            if i == df.index.min():
+                pass
+            
+            else:
+                price_prev = df.loc[period_prev][value]
+                return_strat = return_predict * price_beg
+                price_end = price_beg + return_strat
+                print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
+                df.loc[i, 'value_strat'] = price_end
+                price_beg = price_end
+        return df
+
+    def skbacktest(self, df, skmodel, cols_x, cols_y, col_period , col_value, train_window=4 , test_window=1, test_gap = 0, expanding=False, print_iter=False):
+        df_model = self.skpredict_window(df, skmodel, cols_x, cols_y, col_period , train_window, test_window, test_gap, expanding, print_iter)[1]
+        
+        df_model.loc[df_model['predict'] > 0, 'strat_return'] = df_model[cols_y]
+        df_model.loc[df_model['predict'] < 0, 'strat_return'] = -df_model[cols_y]
+
+        period_arr = np.empty([0,2])
+        period_idx = [i for i in df_model.index]
+
+        for i,j in enumerate(period_idx):
+            if i ==0:
+                x, y = j, np.nan
+            else:
+                x,y = j, period_idx[i-1]
+            arr = np.array([[x,y]])
+            period_arr = np.append(period_arr, arr, axis=0)
+
+        ## back test results of strategy
+        price_beg = df_model.loc[period_arr[0,0]][col_value]
+        for i in df_model.index:
+            period_prev = period_arr[period_arr[:,0] ==i][:,1][0]
+            period_now = i
+            price_now = df_model.loc[i][col_value]
+            return_predict = df_model.loc[i]['strat_return']
+            predict = df_model.loc[i]['strat_return']
+            return_act = df_model.loc[i][cols_y]
+
+            if i == df_model.index.min():
+                pass
+            
+            else:
+                price_prev = df_model.loc[period_prev][col_value]
+                return_strat = return_predict * price_beg
+                price_end = price_beg + return_strat
+                print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
+                df_model.loc[i, 'value_strat'] = price_end
+                price_beg = price_end
+
+        return df_model , period_arr
