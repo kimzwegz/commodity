@@ -1,0 +1,4 @@
+conda create --prefix ./commod_env python=3.9
+conda activate ./commod_env
+echo "commod_env activated"
+conda install -c conda-forge --file requirements.txt
