@@ -140,13 +140,19 @@ class Model:
         
         mse_train_all = df_train_conso.MSE.mean()
         mse_test_all = df_test_conso.MSE.mean()
+
+        dict_stat = {"MSEtrain": mse_train_all, "MSEtest": mse_test_all}
         
         print(f'Average MSE train: {mse_train_all}')
         print(f'Average MSE test: {mse_test_all}')
         
-        return df_train_conso , df_test_conso, stat_train_times, stat_test_times
+        return df_train_conso , df_test_conso, stat_train_times, stat_test_times , dict_stat
 
     def backtest(self, df, value, strat_return, pct_change, predict_return):
+
+        """
+        
+        """
         ## produce array for t and t-1 indexing
         
         period_arr = np.empty([0,2])
@@ -177,13 +183,15 @@ class Model:
                 price_prev = df.loc[period_prev][value]
                 return_strat = return_predict * price_beg
                 price_end = price_beg + return_strat
-                print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
+                # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
                 df.loc[i, 'value_strat'] = price_end
                 price_beg = price_end
         return df
 
     def skbacktest(self, df, skmodel, cols_x, cols_y, col_period , col_value, train_window=4 , test_window=1, test_gap = 0, expanding=False, print_iter=False):
-        df_model = self.skpredict_window(df, skmodel, cols_x, cols_y, col_period , train_window, test_window, test_gap, expanding, print_iter)[1]
+
+        df_train_conso , df_model, stat_train_times, stat_test_times , dict_stat = self.skpredict_window(df, skmodel, cols_x, cols_y, col_period , train_window, test_window, test_gap, expanding, print_iter)
+        
         
         df_model.loc[df_model['predict'] > 0, 'strat_return'] = df_model[cols_y]
         df_model.loc[df_model['predict'] < 0, 'strat_return'] = -df_model[cols_y]
@@ -216,8 +224,8 @@ class Model:
                 price_prev = df_model.loc[period_prev][col_value]
                 return_strat = return_predict * price_beg
                 price_end = price_beg + return_strat
-                print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
+                # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
                 df_model.loc[i, 'value_strat'] = price_end
                 price_beg = price_end
 
-        return df_model , period_arr
+        return df_model, dict_stat
