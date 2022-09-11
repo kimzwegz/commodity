@@ -7,6 +7,17 @@ from sklearn import metrics
 from sklearn import ensemble
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
+
+def return_tot(df, date, value_beg, value_end):
+    period_beg = df.date.min()
+    period_end = df.date.max()
+
+    price_beg = df.loc[df.date == period_beg, value_beg].values[0]
+    price_end = df.loc[df.date == period_end, value_end].values[0]
+
+    ret = (price_end-price_beg)/ price_beg
+    return ret
+
 class Model:
     def __init__(self,df):
         self.df = df
@@ -227,5 +238,9 @@ class Model:
                 # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
                 df_model.loc[i, 'value_strat'] = price_end
                 price_beg = price_end
+
+
+        beg_val = df_model[df_model['date']==df_model['date'].min()][col_value][0]
+        df_model.loc[df_model['date']==df_model['date'].min(), 'value_strat'] = beg_val
 
         return df_model, dict_stat
