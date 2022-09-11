@@ -159,7 +159,7 @@ class Model:
         
         return df_train_conso , df_test_conso, stat_train_times, stat_test_times , dict_stat
 
-    def backtest(self, df, value, strat_return, pct_change, predict_return):
+    def backtest(self, df, value, strat_return, new_col_name):
 
         """
         
@@ -181,11 +181,7 @@ class Model:
         price_beg = df.loc[period_arr[0,0]][value]
         for i in df.index:
             period_prev = period_arr[period_arr[:,0] ==i][:,1][0]
-            period_now = i
-            price_now = df.loc[i][value]
             return_predict = df.loc[i][strat_return]
-            predict = df.loc[i][predict_return]
-            return_act = df.loc[i][pct_change]
 
             if i == df.index.min():
                 pass
@@ -195,7 +191,7 @@ class Model:
                 return_strat = return_predict * price_beg
                 price_end = price_beg + return_strat
                 # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
-                df.loc[i, 'value_strat'] = price_end
+                df.loc[i, new_col_name] = price_end
                 price_beg = price_end
         return df
 
@@ -203,42 +199,41 @@ class Model:
 
         df_train_conso , df_model, stat_train_times, stat_test_times , dict_stat = self.skpredict_window(df, skmodel, cols_x, cols_y, col_period , train_window, test_window, test_gap, expanding, print_iter)
         
-        
         df_model.loc[df_model['predict'] > 0, 'strat_return'] = df_model[cols_y]
         df_model.loc[df_model['predict'] < 0, 'strat_return'] = -df_model[cols_y]
+        
+        df_model = self.backtest(df_model, 'value' , 'strat_return', 'value_strat')
+        # period_arr = np.empty([0,2])
+        # period_idx = [i for i in df_model.index]
 
-        period_arr = np.empty([0,2])
-        period_idx = [i for i in df_model.index]
+        # for i,j in enumerate(period_idx):
+        #     if i ==0:
+        #         x, y = j, np.nan
+        #     else:
+        #         x,y = j, period_idx[i-1]
+        #     arr = np.array([[x,y]])
+        #     period_arr = np.append(period_arr, arr, axis=0)
 
-        for i,j in enumerate(period_idx):
-            if i ==0:
-                x, y = j, np.nan
-            else:
-                x,y = j, period_idx[i-1]
-            arr = np.array([[x,y]])
-            period_arr = np.append(period_arr, arr, axis=0)
+        # ## back test results of strategy
+        # price_beg = df_model.loc[period_arr[0,0]][col_value]
+        # for i in df_model.index:
+        #     period_prev = period_arr[period_arr[:,0] ==i][:,1][0]
+        #     period_now = i
+        #     price_now = df_model.loc[i][col_value]
+        #     return_predict = df_model.loc[i]['strat_return']
+        #     predict = df_model.loc[i]['strat_return']
+        #     return_act = df_model.loc[i][cols_y]
 
-        ## back test results of strategy
-        price_beg = df_model.loc[period_arr[0,0]][col_value]
-        for i in df_model.index:
-            period_prev = period_arr[period_arr[:,0] ==i][:,1][0]
-            period_now = i
-            price_now = df_model.loc[i][col_value]
-            return_predict = df_model.loc[i]['strat_return']
-            predict = df_model.loc[i]['strat_return']
-            return_act = df_model.loc[i][cols_y]
-
-            if i == df_model.index.min():
-                pass
+        #     if i == df_model.index.min():
+        #         pass
             
-            else:
-                price_prev = df_model.loc[period_prev][col_value]
-                return_strat = return_predict * price_beg
-                price_end = price_beg + return_strat
-                # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
-                df_model.loc[i, 'value_strat'] = price_end
-                price_beg = price_end
-
+        #     else:
+        #         price_prev = df_model.loc[period_prev][col_value]
+        #         return_strat = return_predict * price_beg
+        #         price_end = price_beg + return_strat
+        #         # print(i, price_prev, price_now, return_act, return_predict, predict, return_strat ,price_beg, price_end)
+        #         df_model.loc[i, 'value_strat'] = price_end
+        #         price_beg = price_end
 
         beg_val = df_model[df_model['date']==df_model['date'].min()][col_value][0]
         df_model.loc[df_model['date']==df_model['date'].min(), 'value_strat'] = beg_val
